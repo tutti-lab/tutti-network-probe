@@ -30,20 +30,18 @@ fi
 cd "$repository_root"
 go test ./...
 
-for probe_arch in arm64 amd64; do
-  archive_name="tutti-network-probe-darwin-$probe_arch.tar.gz"
-  build_dir="$temporary_dir/darwin-$probe_arch"
-  mkdir -p "$build_dir"
-  CGO_ENABLED=0 GOOS=darwin GOARCH="$probe_arch" go build \
-    -trimpath \
-    -ldflags "-s -w -X main.version=$probe_version" \
-    -o "$build_dir/tutti-network-probe" .
-  tar -C "$build_dir" -czf "$temporary_dir/$archive_name" tutti-network-probe
-done
+archive_name="tutti-network-probe-darwin-arm64.tar.gz"
+build_dir="$temporary_dir/darwin-arm64"
+mkdir -p "$build_dir"
+CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build \
+  -trimpath \
+  -ldflags "-s -w -X main.version=$probe_version" \
+  -o "$build_dir/tutti-network-probe" .
+tar -C "$build_dir" -czf "$temporary_dir/$archive_name" tutti-network-probe
 
 (
   cd "$temporary_dir"
-  shasum -a 256 tutti-network-probe-darwin-*.tar.gz >SHA256SUMS
+  shasum -a 256 tutti-network-probe-darwin-arm64.tar.gz >SHA256SUMS
 )
 sed "s/@VERSION@/$probe_version/g" scripts/install.sh.tmpl >"$temporary_dir/install.sh"
 cp scripts/uninstall.sh "$temporary_dir/uninstall.sh"
@@ -52,7 +50,6 @@ printf '%s\n' "$probe_version" >"$temporary_dir/latest-version"
 release_destination="s3://$bucket/$prefix/releases/$probe_version"
 immutable_cache="public, max-age=31536000, immutable"
 aws s3 cp "$temporary_dir/tutti-network-probe-darwin-arm64.tar.gz" "$release_destination/tutti-network-probe-darwin-arm64.tar.gz" --content-type application/gzip --cache-control "$immutable_cache"
-aws s3 cp "$temporary_dir/tutti-network-probe-darwin-amd64.tar.gz" "$release_destination/tutti-network-probe-darwin-amd64.tar.gz" --content-type application/gzip --cache-control "$immutable_cache"
 aws s3 cp "$temporary_dir/SHA256SUMS" "$release_destination/SHA256SUMS" --content-type text/plain --cache-control "$immutable_cache"
 aws s3 cp "$temporary_dir/install.sh" "$release_destination/install.sh" --content-type text/x-shellscript --cache-control "$immutable_cache"
 aws s3 cp "$temporary_dir/uninstall.sh" "$release_destination/uninstall.sh" --content-type text/x-shellscript --cache-control "$immutable_cache"

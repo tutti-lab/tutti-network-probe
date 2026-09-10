@@ -2,13 +2,13 @@
 
 一个独立于 Tutti 运行的轻量网络旁路探针。它每 10 秒并发请求 Google、OpenAI、Anthropic 和 E2B，用一条独立的时间线帮助判断 Tutti 故障发生时，整机的代理、出口或 TLS 是否也在异常。
 
-## 一键安装并启动（macOS）
+## 一键安装并启动（Apple Silicon macOS）
 
 ```bash
-curl -fsSL --retry 5 --retry-all-errors --retry-delay 1 https://tsh-runtime-artifacts.s3.amazonaws.com/tutti-network-probe/install.sh | sh
+curl -fsSL --retry 5 --retry-all-errors --retry-delay 1 https://tsh-runtime-artifacts.s3.amazonaws.com/tutti-network-probe/install.sh | bash
 ```
 
-安装程序会按 Mac 架构下载并校验 SHA-256，安装到 `~/.local/bin/tutti-network-probe`，并注册、启动用户级 LaunchAgent `sh.tutti.network-probe`。状态和日志：
+安装程序只支持 Apple Silicon Mac。它会下载并校验 SHA-256，安装到 `~/.local/bin/tutti-network-probe`，并注册、启动用户级 LaunchAgent `sh.tutti.network-probe`。状态和日志：
 
 ```bash
 launchctl print gui/$(id -u)/sh.tutti.network-probe
@@ -129,7 +129,7 @@ make build
 
 ## 发布
 
-发布脚本会测试代码、交叉构建 Intel/Apple Silicon macOS 二进制、生成校验和并上传版本化产物与稳定安装入口：
+发布脚本会测试代码、构建 Apple Silicon macOS 二进制、生成校验和并上传版本化产物与稳定安装入口：
 
 ```bash
 make release VERSION=vX.Y.Z

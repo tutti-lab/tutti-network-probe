@@ -15,18 +15,11 @@ if [ "$(uname -s)" != "Darwin" ]; then
   exit 1
 fi
 
-case "$(uname -m)" in
-  arm64)
-    probe_arch="arm64"
-    ;;
-  x86_64)
-    probe_arch="amd64"
-    ;;
-  *)
-    echo "unsupported macOS architecture: $(uname -m)" >&2
-    exit 1
-    ;;
-esac
+if [ "$(uname -m)" != "arm64" ]; then
+  echo "tutti-network-probe currently supports Apple Silicon Macs only" >&2
+  exit 1
+fi
+probe_arch="arm64"
 
 for required_command in curl shasum tar launchctl; do
   if ! command -v "$required_command" >/dev/null 2>&1; then
