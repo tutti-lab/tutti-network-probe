@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
+export LC_ALL=C
+export LANG=C
 
 if [[ $# -lt 1 || $# -gt 2 ]]; then
   echo "usage: scripts/release.sh <vX.Y.Z> [s3-bucket]" >&2

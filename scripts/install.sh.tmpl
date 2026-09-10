@@ -1,5 +1,7 @@
 #!/bin/sh
 set -eu
+export LC_ALL=C
+export LANG=C
 
 probe_version="${TUTTI_NETWORK_PROBE_VERSION:-@VERSION@}"
 download_base="${TUTTI_NETWORK_PROBE_DOWNLOAD_BASE:-https://tsh-runtime-artifacts.s3.amazonaws.com/tutti-network-probe}"
@@ -97,7 +99,7 @@ EOF
 install -m 0644 "$temporary_dir/$label.plist" "$plist_path"
 
 launchctl bootstrap "gui/$user_id" "$plist_path"
-launchctl kickstart -k "gui/$user_id/$label"
+launchctl kickstart "gui/$user_id/$label"
 
 installed_version="$("$binary_path" --version)"
 echo "Installed and started tutti-network-probe $installed_version"
