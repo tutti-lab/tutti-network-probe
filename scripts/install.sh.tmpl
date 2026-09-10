@@ -1,0 +1,113 @@
+#!/bin/sh
+set -eu
+
+probe_version="${TUTTI_NETWORK_PROBE_VERSION:-@VERSION@}"
+download_base="${TUTTI_NETWORK_PROBE_DOWNLOAD_BASE:-https://tsh-runtime-artifacts.s3.amazonaws.com/tutti-network-probe}"
+install_dir="${TUTTI_NETWORK_PROBE_INSTALL_DIR:-$HOME/.local/bin}"
+binary_path="$install_dir/tutti-network-probe"
+label="sh.tutti.network-probe"
+launch_agents_dir="$HOME/Library/LaunchAgents"
+plist_path="$launch_agents_dir/$label.plist"
+log_dir="$HOME/Library/Logs/Tutti"
+
+if [ "$(uname -s)" != "Darwin" ]; then
+  echo "tutti-network-probe installer currently supports macOS only" >&2
+  exit 1
+fi
+
+case "$(uname -m)" in
+  arm64)
+    probe_arch="arm64"
+    ;;
+  x86_64)
+    probe_arch="amd64"
+    ;;
+  *)
+    echo "unsupported macOS architecture: $(uname -m)" >&2
+    exit 1
+    ;;
+esac
+
+for required_command in curl shasum tar launchctl; do
+  if ! command -v "$required_command" >/dev/null 2>&1; then
+    echo "required command not found: $required_command" >&2
+    exit 1
+  fi
+done
+
+temporary_dir="$(mktemp -d)"
+cleanup() {
+  rm -rf "$temporary_dir"
+}
+trap cleanup EXIT HUP INT TERM
+
+archive_name="tutti-network-probe-darwin-$probe_arch.tar.gz"
+release_base="$download_base/releases/$probe_version"
+
+echo "Downloading tutti-network-probe $probe_version for darwin/$probe_arch..."
+curl --fail --silent --show-error --location "$release_base/$archive_name" --output "$temporary_dir/$archive_name"
+curl --fail --silent --show-error --location "$release_base/SHA256SUMS" --output "$temporary_dir/SHA256SUMS"
+
+expected_checksum="$(awk -v archive="$archive_name" '$2 == archive { print $1 }' "$temporary_dir/SHA256SUMS")"
+if [ -z "$expected_checksum" ]; then
+  echo "checksum not found for $archive_name" >&2
+  exit 1
+fi
+actual_checksum="$(shasum -a 256 "$temporary_dir/$archive_name" | awk '{ print $1 }')"
+if [ "$actual_checksum" != "$expected_checksum" ]; then
+  echo "checksum mismatch for $archive_name" >&2
+  exit 1
+fi
+
+tar -xzf "$temporary_dir/$archive_name" -C "$temporary_dir"
+if [ ! -x "$temporary_dir/tutti-network-probe" ]; then
+  echo "release archive does not contain an executable tutti-network-probe" >&2
+  exit 1
+fi
+
+mkdir -p "$install_dir" "$launch_agents_dir" "$log_dir"
+user_id="$(id -u)"
+launchctl bootout "gui/$user_id/$label" >/dev/null 2>&1 || true
+install -m 0755 "$temporary_dir/tutti-network-probe" "$binary_path"
+
+xml_binary_path="$(printf '%s' "$binary_path" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g')"
+xml_error_log="$(printf '%s' "$log_dir/network-probe-service.log" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g')"
+cat >"$temporary_dir/$label.plist" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>$label</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>$xml_binary_path</string>
+    <string>--quiet</string>
+    <string>--curl</string>
+    <string>/usr/bin/curl</string>
+  </array>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>ProcessType</key>
+  <string>Background</string>
+  <key>ThrottleInterval</key>
+  <integer>10</integer>
+  <key>StandardOutPath</key>
+  <string>/dev/null</string>
+  <key>StandardErrorPath</key>
+  <string>$xml_error_log</string>
+</dict>
+</plist>
+EOF
+install -m 0644 "$temporary_dir/$label.plist" "$plist_path"
+
+launchctl bootstrap "gui/$user_id" "$plist_path"
+launchctl kickstart -k "gui/$user_id/$label"
+
+installed_version="$("$binary_path" --version)"
+echo "Installed and started tutti-network-probe $installed_version"
+echo "Observation log: $log_dir/network-probe.jsonl"
+echo "Service errors:  $log_dir/network-probe-service.log"
+echo "Service status:  launchctl print gui/$user_id/$label"
