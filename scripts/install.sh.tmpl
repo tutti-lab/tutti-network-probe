@@ -45,8 +45,8 @@ archive_name="tutti-network-probe-darwin-$probe_arch.tar.gz"
 release_base="$download_base/releases/$probe_version"
 
 echo "Downloading tutti-network-probe $probe_version for darwin/$probe_arch..."
-curl --fail --silent --show-error --location "$release_base/$archive_name" --output "$temporary_dir/$archive_name"
-curl --fail --silent --show-error --location "$release_base/SHA256SUMS" --output "$temporary_dir/SHA256SUMS"
+curl --fail --silent --show-error --location --retry 5 --retry-all-errors --retry-delay 1 "$release_base/$archive_name" --output "$temporary_dir/$archive_name"
+curl --fail --silent --show-error --location --retry 5 --retry-all-errors --retry-delay 1 "$release_base/SHA256SUMS" --output "$temporary_dir/SHA256SUMS"
 
 expected_checksum="$(awk -v archive="$archive_name" '$2 == archive { print $1 }' "$temporary_dir/SHA256SUMS")"
 if [ -z "$expected_checksum" ]; then

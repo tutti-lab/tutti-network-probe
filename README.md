@@ -5,7 +5,7 @@
 ## 一键安装并启动（macOS）
 
 ```bash
-curl -fsSL https://tsh-runtime-artifacts.s3.amazonaws.com/tutti-network-probe/install.sh | sh
+curl -fsSL --retry 5 --retry-all-errors --retry-delay 1 https://tsh-runtime-artifacts.s3.amazonaws.com/tutti-network-probe/install.sh | sh
 ```
 
 安装程序会按 Mac 架构下载并校验 SHA-256，安装到 `~/.local/bin/tutti-network-probe`，并注册、启动用户级 LaunchAgent `sh.tutti.network-probe`。状态和日志：
@@ -18,7 +18,7 @@ tail -f ~/Library/Logs/Tutti/network-probe.jsonl
 卸载程序但保留诊断日志：
 
 ```bash
-curl -fsSL https://tsh-runtime-artifacts.s3.amazonaws.com/tutti-network-probe/uninstall.sh | sh
+curl -fsSL --retry 5 --retry-all-errors --retry-delay 1 https://tsh-runtime-artifacts.s3.amazonaws.com/tutti-network-probe/uninstall.sh | sh
 ```
 
 ## 观测范围
@@ -132,7 +132,7 @@ make build
 发布脚本会测试代码、交叉构建 Intel/Apple Silicon macOS 二进制、生成校验和并上传版本化产物与稳定安装入口：
 
 ```bash
-make release VERSION=v0.1.0
+make release VERSION=vX.Y.Z
 ```
 
 默认发布到 `s3://tsh-runtime-artifacts/tutti-network-probe/`；版本目录不可覆盖。
